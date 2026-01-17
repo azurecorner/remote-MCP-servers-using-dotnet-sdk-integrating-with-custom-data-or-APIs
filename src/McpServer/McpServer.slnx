@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="McpServer/McpServer.csproj" />
+  <Project Path="WeatherForecastService/WeatherForecastService.csproj" Id="458127f0-bac8-45af-9fa7-e1253fb262a0" />
+</Solution>

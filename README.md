@@ -1,1 +1,1 @@
-# remote-MCP-servers-using-dotnet-sdk-integrating-with-our-own-data-or-apis
+# remote-MCP-servers-using-dotnet

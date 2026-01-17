@@ -1,0 +1,9 @@
+﻿################################################################################
+# This .gitignore file was automatically created by Microsoft(R) Visual Studio.
+################################################################################
+
+/src/McpServer/.vs
+/src/McpServer/McpServer/bin/Debug/net10.0
+/src/McpServer/McpServer/obj
+/src/McpServer/WeatherForecastService/bin/Debug/net10.0
+/src/McpServer/WeatherForecastService/obj
