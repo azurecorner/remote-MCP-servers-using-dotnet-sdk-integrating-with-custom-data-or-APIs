@@ -1,4 +1,5 @@
 using McpServer;
+using WeatherService;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -10,6 +11,8 @@ builder.Services.AddMcpServer()
     {
         options.Stateless = true;
     })
+     .WithStdioServerTransport()
+    .WithToolsFromAssembly()
     .WithTools<McpServerTools>();
 
 builder.Services.AddHttpClient();

@@ -6,10 +6,6 @@
 		}
 	},
 	"inputs": [
-       {
-            "type": "promptString",
-            "id": "functionapp-name",
-            "description": "Azure Functions App Name"
-        }
+       
     ]
 }

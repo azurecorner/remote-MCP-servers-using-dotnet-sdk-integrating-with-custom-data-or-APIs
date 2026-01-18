@@ -1,6 +1,9 @@
-﻿using McpServer;
-using ModelContextProtocol.Server;
+﻿using ModelContextProtocol.Server;
 using System.ComponentModel;
+using WeatherService;
+using WeatherService.Models;
+
+namespace McpServer;
 
 [McpServerToolType]
 public sealed class McpServerTools
