@@ -10,6 +10,7 @@ A comprehensive example demonstrating how to build **Model Context Protocol (MCP
 - [Architecture](#architecture)
 - [Prerequisites](#prerequisites)
 - [Project Structure](#project-structure)
+- [Developement](#Developement)
 - [Getting Started](#getting-started)
 - [Configuration](#configuration)
 - [Available MCP Tools](#available-mcp-tools)
@@ -80,8 +81,11 @@ The project follows a clean architecture pattern:
 ## Prerequisites
 
 - [.NET 10.0 SDK](https://dotnet.microsoft.com/download/dotnet/10.0) or later
-- Visual Studio 2022 / VS Code / any compatible editor supporting the MCP extension
-- An MCP-compatible client (e.g., Kiro, Claude Desktop, VS Code with MCP extension)
+- Visual Studio 2022 / VS Code / any compatible editor
+- An MCP-compatible client:
+  - [Claude Desktop](https://claude.ai/download) (recommended)
+  - [VS Code with MCP extension](https://marketplace.visualstudio.com/items?itemName=modelcontextprotocol.mcp-vscode)
+  - [Kiro](https://github.com/modelcontextprotocol/kiro) or other MCP clients
 
 ## Project Structure
 
@@ -152,7 +156,7 @@ RawContent        : HTTP/1.1 200 OK
 
 #### VS Code Copilot
 
-Add to your VS Code settings: .\remote-MCP-servers-using-dotnet-sdk-integrating-with-our-own-data-or-apis\.vscode\mcp.json
+Add to your VS Code settings: `.vscode/mcp.json` in your workspace:
 
 ```json
 {
@@ -167,10 +171,25 @@ Add to your VS Code settings: .\remote-MCP-servers-using-dotnet-sdk-integrating-
 
 ## Available MCP Tools
 
-bash =>
+This MCP server exposes tools that can be discovered and invoked by MCP clients. To see all available tools, you can query the server using the `tools/list` JSON-RPC method.
+
+### Current Tools
+
+- **`get_weather`** - Retrieves weather information for a specified city
+  - **Parameters**: `city` (string) - The name of the city
+  - **Returns**: Weather forecast data including temperature, conditions, and humidity
+
+- **`ping`** - Simple echo tool for testing connectivity
+  - **Parameters**: `message` (string) - Message to echo back
+  - **Returns**: The same message with a timestamp
+
+### Discovering Tools
+
+You can discover all available tools by sending a `tools/list` request to the MCP server:
+
+**bash =>**
 
 ```bash
-
 curl -X POST http://localhost:8081/mcp \
      -H "Content-Type: application/json" \
      -H "Accept: application/json, text/event-stream" \
@@ -180,13 +199,11 @@ curl -X POST http://localhost:8081/mcp \
            "method": "tools/list",
            "params": {}
          }'
-
 ```
 
-powershell =>
+**powershell =>**
 
 ```powershell
-
 # MCP endpoint
 $mcpEndpoint = "http://localhost:8081/mcp"
 
@@ -219,17 +236,60 @@ write-Host "Received Response:" -ForegroundColor Green
 Write-Host $content -ForegroundColor White
 ```
 
-## Usage
+**Expected Response:**
 
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "tools": [
+      {
+        "name": "get_weather",
+        "description": "Get weather information for a city",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "city": {
+              "type": "string",
+              "description": "The city name"
+            }
+          },
+          "required": ["city"]
+        }
+      },
+      {
+        "name": "ping",
+        "description": "Echo a message back",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "message": {
+              "type": "string",
+              "description": "Message to echo"
+            }
+          },
+          "required": ["message"]
+        }
+      }
+    ]
+  }
+}
+```
+
+## Usage
 
 ### Direct API Testing
 
-#### Test Weather
+You can test MCP tools directly by sending JSON-RPC requests to the server endpoint. This is useful for debugging, testing, and understanding how MCP clients interact with your server.
 
-bash =>
+#### Test Weather Tool
+
+The `get_weather` tool retrieves weather information for a specified city. Use the following scripts to invoke the tool:
+
+**bash =>**
 
 ```bash
-
 # Test Weather
 
 # Default parameters
@@ -257,11 +317,9 @@ curl -s -X POST "$MCP_ENDPOINT" \
      -H "Content-Type: application/json" \
      -H "Accept: application/json, text/event-stream" \
      -d "$BODY"
-
 ```
 
-
-powershell
+**powershell =>**
 
 ```powershell
 Param(
@@ -324,6 +382,11 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - [Model Context Protocol](https://modelcontextprotocol.io) - For the MCP specification
 - [Anthropic](https://www.anthropic.com) - For Claude and MCP support
 - [Microsoft](https://microsoft.com) - For .NET and Azure
+- The MCP community for examples and support
 
 ---
+
+**Built with ❤️ by Azure Warriors**
+
+For questions or support, please open an issue on GitHub.
 
