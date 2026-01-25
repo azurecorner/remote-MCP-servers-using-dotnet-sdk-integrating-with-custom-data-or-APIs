@@ -11,7 +11,7 @@ A comprehensive example demonstrating how to build **Model Context Protocol (MCP
 - [Prerequisites](#prerequisites)
 - [Project Structure](#project-structure)
 - [Development](#development)
-- [Getting Started](#getting-started)
+- [Quick Start](#quick-start)
 - [Available MCP Tools](#available-mcp-tools)
 - [Usage](#usage)
 - [Contributing](#contributing)
@@ -278,7 +278,7 @@ app.MapMcp("/mcp");
 app.Run();
 ```
 
-## Getting Started
+## Quick Start
 
 ### 1. Clone the Repository
 
@@ -339,7 +339,7 @@ This MCP server exposes tools that can be discovered and invoked by MCP clients.
 
 You can discover all available tools by sending a `tools/list` request to the MCP server:
 
-**bash =>**
+#### bash
 
 ```bash
 curl -X POST http://localhost:8081/mcp \
@@ -353,7 +353,7 @@ curl -X POST http://localhost:8081/mcp \
          }'
 ```
 
-**powershell =>**
+#### powershell
 
 ```powershell
 # MCP endpoint
