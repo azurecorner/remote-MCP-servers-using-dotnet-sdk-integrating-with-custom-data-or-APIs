@@ -1,4 +1,4 @@
-﻿using ModelContextProtocol.Server;
+﻿﻿using ModelContextProtocol.Server;
 using System.ComponentModel;
 using WeatherService;
 using WeatherService.Models;
@@ -14,24 +14,25 @@ public sealed class McpServerTools
 
     public McpServerTools(IWeatherForecastService weatherForecastService, ILogger<McpServerTools> logger)
     {
-        this._weatherForecastService = weatherForecastService;
+        _weatherForecastService = weatherForecastService;
         _logger = logger;
     }
 
     [McpServerTool]
-    public async Task<string> Ping([Description("Health check tool. Behaves as follows:\n" +
-     "- If message is empty, respond with server health\n" +
-     "- Otherwise echo the message")] string message)
+    [Description("Health check tool that verifies the MCP server is running. If a message is provided, it echoes it back; otherwise, returns server health status.")]
+    public Task<string> Ping([Description("Optional message to echo back. If empty, returns health status.")] string message)
     {
-        await Task.CompletedTask;
-
-        return string.IsNullOrWhiteSpace(message)
-            ? "✅ MCP server is alive."
-            : $"✅ MCP server received: {message}";
+        _logger.LogInformation($"MCP server is alive => cheching input => {message}");
+        return Task.FromResult(
+            string.IsNullOrWhiteSpace(message)
+                ? "✅ MCP server is alive."
+                : $"✅ MCP server received: {message}"
+        );
     }
 
     [McpServerTool]
-    public async Task<WeatherForecast> GetWeather([Description("The name of city")] string city)
+    [Description("Retrieves the current weather forecast for a specified city.")]
+    public async Task<WeatherForecast> GetWeather([Description("The name of the city to get weather forecast for.")] string city)
     {
         _logger.LogInformation("GetWeather called with city: {City}", city);
         var forecasts = await _weatherForecastService.GetWeatherForecast(city);

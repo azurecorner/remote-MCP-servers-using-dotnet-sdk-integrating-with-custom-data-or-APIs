@@ -26,6 +26,9 @@ $response = Invoke-WebRequest `
 # Read response content
 $content = $response.Content
 
+write-Host "Received Response:" -ForegroundColor Green
+Write-Host $content -ForegroundColor White
+
 # Parse Server-Sent Events (SSE) JSON payload
 if ($content -match 'data:\s*(.+)') {
     $jsonData = $matches[1] | ConvertFrom-Json
