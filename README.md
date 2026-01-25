@@ -10,9 +10,8 @@ A comprehensive example demonstrating how to build **Model Context Protocol (MCP
 - [Architecture](#architecture)
 - [Prerequisites](#prerequisites)
 - [Project Structure](#project-structure)
-- [Developement](#Developement)
+- [Development](#development)
 - [Getting Started](#getting-started)
-- [Configuration](#configuration)
 - [Available MCP Tools](#available-mcp-tools)
 - [Usage](#usage)
 - [Contributing](#contributing)
@@ -96,15 +95,187 @@ remote-MCP-servers-using-dotnet-sdk-integrating-with-our-own-data-or-apis/
 │       ├── McpServer/
 │       │   ├── Program.cs              # Application entry point
 │       │   ├── appsettings.json        # Configuration settings
-│       │   ├── Tools/                  # MCP tool implementations
-│       │   │   ├── PingTool.cs
-│       │   │   └── WeatherTool.cs
+│       │   ├── McpServerTools.cs       # MCP tool implementations
 │       │   └── Services/               # Business logic services
-│       │       └── WeatherService.cs
+│       │       └── WeatherService.cs   # Weather API integration
 │       └── McpServer.sln
 ├── docs/                               # Additional documentation
 ├── README.md                           # This file
 └── LICENSE
+```
+
+## Development
+
+This section explains how to create custom MCP tools and integrate them with your own APIs and data sources.
+
+### Creating Custom MCP Tools
+
+MCP tools are the bridge between AI clients and your backend services. Each tool represents a capability that AI assistants can invoke.
+
+#### Tool Architecture
+
+```text
+┌──────────────────┐
+│   MCP Client     │ (Claude, VS Code, etc.)
+└────────┬─────────┘
+         │ "Get weather for Paris"
+         ▼
+┌──────────────────┐
+│ McpServerTools   │ [McpServerTool] decorated methods
+└────────┬─────────┘
+         │
+         ▼
+┌──────────────────┐
+│ Business Service │ IWeatherForecastService
+└────────┬─────────┘
+         │
+         ▼
+┌──────────────────┐
+│  External API    │ Weather API, Database, etc.
+└──────────────────┘
+```
+
+#### Step 1: Define Your Tool Class
+
+Create a class decorated with `[McpServerToolType]`:
+
+```csharp
+[McpServerToolType]
+public sealed class McpServerTools
+{
+    private readonly IWeatherForecastService _weatherForecastService;
+    private readonly ILogger<McpServerTools> _logger;
+
+    public McpServerTools(
+        IWeatherForecastService weatherForecastService, 
+        ILogger<McpServerTools> logger)
+    {
+        _weatherForecastService = weatherForecastService;
+        _logger = logger;
+    }
+}
+```
+
+**Key Points:**
+
+- Use `[McpServerToolType]` to mark the class as containing MCP tools
+- Inject services via constructor (supports standard .NET DI)
+- Follow .NET dependency injection patterns
+
+#### Step 2: Create Tool Methods
+
+Each method decorated with `[McpServerTool]` becomes an invokable tool:
+
+```csharp
+[McpServerTool]
+[Description("Retrieves the current weather forecast for a specified city.")]
+public async Task<WeatherForecast> GetWeather(
+    [Description("The name of the city to get weather forecast for.")] 
+    string city)
+{
+    _logger.LogInformation("GetWeather called with city: {City}", city);
+    
+    // Call your business service/API
+    var forecasts = await _weatherForecastService.GetWeatherForecast(city);
+
+    _logger.LogInformation("GetWeather returning forecast for city: {City}", city);
+    return forecasts;
+}
+```
+
+**Key Attributes:**
+
+- `[McpServerTool]` - Marks method as an MCP tool
+- `[Description("...")]` - Provides description for AI to understand tool purpose
+- Parameter descriptions help AI choose correct arguments
+
+**Best Practices:**
+
+- Use clear, descriptive names (e.g., `GetWeather`, not `GW`)
+- Add detailed descriptions for both tool and parameters
+- Use strongly-typed return values
+- Include logging for diagnostics
+- Handle exceptions gracefully
+
+#### Step 3: Implement Your Business Service
+
+Create a service that encapsulates your API/data logic:
+
+```csharp
+public interface IWeatherForecastService
+{
+    Task<WeatherForecast> GetWeatherForecast(string city);
+}
+
+public class WeatherForecastService : IWeatherForecastService
+{
+    private readonly HttpClient _httpClient;
+    private readonly ILogger<WeatherForecastService> _logger;
+
+    public WeatherForecastService(
+        HttpClient httpClient, 
+        ILogger<WeatherForecastService> logger)
+    {
+        _httpClient = httpClient;
+        _logger = logger;
+    }
+
+    public async Task<WeatherForecast> GetWeatherForecast(string city)
+    {
+        try
+        {
+            // Call external weather API
+            var response = await _httpClient.GetAsync(
+                $"https://api.weather.com/v1/forecast?city={city}");
+            
+            response.EnsureSuccessStatusCode();
+            
+            var forecast = await response.Content
+                .ReadFromJsonAsync<WeatherForecast>();
+            
+            return forecast ?? throw new InvalidOperationException(
+                "Failed to deserialize weather data");
+        }
+        catch (HttpRequestException ex)
+        {
+            _logger.LogError(ex, "Failed to fetch weather for {City}", city);
+            throw;
+        }
+    }
+}
+```
+
+#### Step 4: Register Services
+
+In `Program.cs`, register your services:
+
+```csharp
+var builder = WebApplication.CreateBuilder(args);
+
+// Register MCP server
+builder.Services.AddMcpServer();
+
+// Register your business services
+builder.Services.AddHttpClient<IWeatherForecastService, WeatherForecastService>(
+    client =>
+    {
+        client.BaseAddress = new Uri("https://api.weather.com");
+        client.DefaultRequestHeaders.Add("User-Agent", "MCP-Weather-Server/1.0");
+    });
+
+// Add logging
+builder.Services.AddLogging(logging =>
+{
+    logging.AddConsole();
+    logging.AddDebug();
+});
+
+var app = builder.Build();
+
+// Map MCP endpoint
+app.MapMcp("/mcp");
+
+app.Run();
 ```
 
 ## Getting Started
@@ -148,25 +319,6 @@ RawContent        : HTTP/1.1 200 OK
                     Content-Type: text/plain; charset=utf-8
                     Date: Sun, 25 Jan 2026 10:20:38 GMT
                     Server: Kestrel
-```
-
-## Configuration
-
-### Configuring MCP Clients
-
-#### VS Code Copilot
-
-Add to your VS Code settings: `.vscode/mcp.json` in your workspace:
-
-```json
-{
-  "mcp.servers": {
-    "local-mcp-server": {
-      "url": "http://localhost:8081/mcp",
-      "type": "http"
-    }
-  }
-}
 ```
 
 ## Available MCP Tools
@@ -287,7 +439,7 @@ You can test MCP tools directly by sending JSON-RPC requests to the server endpo
 
 The `get_weather` tool retrieves weather information for a specified city. Use the following scripts to invoke the tool:
 
-**bash =>**
+##### Bash
 
 ```bash
 # Test Weather
@@ -319,7 +471,7 @@ curl -s -X POST "$MCP_ENDPOINT" \
      -d "$BODY"
 ```
 
-**powershell =>**
+##### PowerShell
 
 ```powershell
 Param(
@@ -386,7 +538,10 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ---
 
-**Built with ❤️ by Azure Warriors**
+## Author
+
+Gora LEYE
+
+[https://logcorner.com/](https://logcorner.com/)
 
 For questions or support, please open an issue on GitHub.
-
