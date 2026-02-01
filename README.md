@@ -19,11 +19,11 @@ A comprehensive example demonstrating how to build **Model Context Protocol (MCP
 
 ## Overview
 
-This project demonstrates how to create **remote MCP servers** that can be consumed by AI applications (like Claude Desktop, VS Code Copilot, etc.) to extend their capabilities with custom tools and data sources. The example implementation includes a weather forecast service that showcases the integration pattern.
+This project demonstrates how to create **remote MCP servers** that can be consumed by AI applications or clients (like Claude Desktop, VS Code Copilot, etc.) to extend their capabilities with custom tools and data sources. The example implementation includes a weather forecast service that showcases the integration pattern.
 
 MCP servers really shine when they’re connected to existing APIs or services, allowing clients to query real, live data. There’s an expanding ecosystem of MCP servers that can already be used by clients, including tools we rely on daily like Git, GitHub, local filesystem, etc.
 
-With that in mind, let’s enhance our MCP server by wiring it up to an API, accepting query parameters, and returning data-driven responses.
+With that in mind, let’s level up our MCP server: plug it into an API, pass in some query params, and start returning responses that are actually driven by real data.
 
 ## What is MCP?
 
@@ -50,7 +50,7 @@ The project follows a clean architecture pattern:
 
 ```text
 ┌─────────────────┐
-│   MCP Client    │ (Claude Desktop, VS Code, etc.)
+│   MCP Client    │ (Claude Desktop, Cursor IDE, Continue.dev, etc.)
 └────────┬────────┘
          │ HTTP/SSE
          ▼
@@ -81,15 +81,15 @@ The project follows a clean architecture pattern:
 
 - [.NET 10.0 SDK](https://dotnet.microsoft.com/download/dotnet/10.0) or later
 - Visual Studio 2022 / VS Code / any compatible editor
-- An MCP-compatible client:
-  - [Claude Desktop](https://claude.ai/download) (recommended)
-  - [VS Code with MCP extension](https://marketplace.visualstudio.com/items?itemName=modelcontextprotocol.mcp-vscode)
-  - [Kiro](https://github.com/modelcontextprotocol/kiro) or other MCP clients
+- An MCP-compatible developer IDE:
+  - [Claude Desktop](https://claude.ai/download) 
+  - [VS Code with MCP extension](https://code.visualstudio.com/docs/copilot/customization/mcp-servers)
+  - [Kiro](https://kiro.dev/) or other MCP clients
 
 ## Project Structure
 
 ```text
-remote-MCP-servers-using-dotnet-sdk-integrating-with-our-own-data-or-apis/
+remote-MCP-servers-using-dotnet-sdk-integrating-with-custom-data-or-APIs/
 ├── src/
 │   └── McpServer/
 │       ├── McpServer/
@@ -116,7 +116,7 @@ MCP tools are the bridge between AI clients and your backend services. Each tool
 
 ```text
 ┌──────────────────┐
-│   MCP Client     │ (Claude, VS Code, etc.)
+│   MCP Client     │ (Claude, Cursor IDE, Continue.dev, etc.)
 └────────┬─────────┘
          │ "Get weather for Paris"
          ▼
@@ -250,32 +250,40 @@ public class WeatherForecastService : IWeatherForecastService
 In `Program.cs`, register your services:
 
 ```csharp
+using McpServer;
+using WeatherService;
+
 var builder = WebApplication.CreateBuilder(args);
 
-// Register MCP server
-builder.Services.AddMcpServer();
+var port = Environment.GetEnvironmentVariable("FUNCTIONS_CUSTOMHANDLER_PORT") ?? "8081";
+builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
 
-// Register your business services
-builder.Services.AddHttpClient<IWeatherForecastService, WeatherForecastService>(
-    client =>
+builder.Services.AddMcpServer()
+    .WithHttpTransport((options) =>
     {
-        client.BaseAddress = new Uri("https://api.weather.com");
-        client.DefaultRequestHeaders.Add("User-Agent", "MCP-Weather-Server/1.0");
-    });
+        options.Stateless = true;
+    })
+     .WithStdioServerTransport()
+    .WithToolsFromAssembly()
+    .WithTools<McpServerTools>();
 
-// Add logging
-builder.Services.AddLogging(logging =>
+builder.Services.AddHttpClient();
+builder.Services.AddScoped<IWeatherForecastService, WeatherForecastService>();
+
+builder.Logging.AddConsole(options =>
 {
-    logging.AddConsole();
-    logging.AddDebug();
+    options.LogToStandardErrorThreshold = LogLevel.Trace;
 });
-
 var app = builder.Build();
 
-// Map MCP endpoint
-app.MapMcp("/mcp");
+// Add health check endpoint
+app.MapGet("/api/healthz", () => "Healthy");
 
-app.Run();
+// Map MCP endpoints
+app.MapMcp(pattern: "/mcp");
+
+// Await the RunAsync method in an async Main
+await app.RunAsync();
 ```
 
 ## Quick Start
@@ -283,8 +291,8 @@ app.Run();
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/azurecorner/remote-MCP-servers-using-dotnet-sdk-integrating-with-our-own-data-or-apis.git
-cd remote-MCP-servers-using-dotnet-sdk-integrating-with-our-own-data-or-apis
+git clone https://github.com/azurecorner/remote-MCP-servers-using-dotnet-sdk-integrating-with-custom-data-or-APIs.git
+cd remote-MCP-servers-using-dotnet-sdk-integrating-with-custom-data-or-APIs
 ```
 
 ### 2. Restore Dependencies
@@ -511,6 +519,49 @@ $response = Invoke-WebRequest `
 
 Write-Host "Success!" -ForegroundColor Green
 write-host $response.Content | ConvertTo-Json
+```
+
+**Expected Response:**
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 2,
+  "result": {
+    "content": [
+      {
+        "type": "text",
+        "text": {
+          "latitude": 48.86,
+          "longitude": 2.3399997,
+          "generationtime_ms": 0.056862831115722656,
+          "utc_offset_seconds": 0,
+          "timezone": "GMT",
+          "timezone_abbreviation": "GMT",
+          "elevation": 43,
+          "current_weather_units": {
+            "time": "iso8601",
+            "interval": "seconds",
+            "temperature": "°C",
+            "windspeed": "km/h",
+            "winddirection": "°",
+            "is_day": "",
+            "weathercode": "wmo code"
+          },
+          "current_weather": {
+            "time": "2026-01-27T06:30:00",
+            "interval": 900,
+            "temperature": 5.8,
+            "windspeed": 15.6,
+            "winddirection": 142,
+            "is_day": 0,
+            "weathercode": 61
+          }
+        }
+      }
+    ]
+  }
+}
 ```
 
 ## Contributing
