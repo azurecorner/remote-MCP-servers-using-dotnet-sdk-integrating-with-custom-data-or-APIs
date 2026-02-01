@@ -36,6 +36,14 @@ jobs:
           dotnet publish --configuration Release --output ./output --self-contained false
           popd
       
+      - name: 'Verify Package Contents'
+        shell: bash
+        run: |
+          echo "Listing output directory contents:"
+          ls -la '${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}/output'
+          echo "Checking for function metadata:"
+          find '${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}/output' -name "*.json" -type f
+      
       - name: Login to Azure
         uses: azure/login@v2
         with:
